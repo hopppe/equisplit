@@ -147,6 +147,9 @@
         <div class="status-message opening-app">
             <div class="loading"></div>
             <p>If this page doesn't redirect automatically, you may need to download EquiSplit first.</p>
+            <a href="https://apps.apple.com/app/id6744609929" class="download-btn" style="margin-top: 20px;">
+                📱 Download from App Store
+            </a>
         </div>
     </div>
 
@@ -193,32 +196,41 @@
                 clearFallbackOnHidden();
             });
             
-            // Try to open the app using multiple methods for better compatibility
-            try {
-                // Method 1: Direct window.location (works best on iOS)
-                window.location.href = customSchemeURL;
-            } catch (e) {
-                console.log('Direct window.location failed, trying iframe method');
-                
-                // Method 2: Hidden iframe (fallback)
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = customSchemeURL;
-                document.body.appendChild(iframe);
-                
-                // Clean up iframe
-                setTimeout(() => {
-                    if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                    }
-                }, 1000);
-            }
+            // Use iframe method first to avoid Safari "invalid address" error
+            // This method doesn't trigger Safari's error message
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.style.width = '1px';
+            iframe.style.height = '1px';
+            iframe.src = customSchemeURL;
+            document.body.appendChild(iframe);
+            
+            // Clean up iframe
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000);
+            
+            // Also try window.location as a backup after a short delay
+            setTimeout(() => {
+                try {
+                    window.location.href = customSchemeURL;
+                } catch (e) {
+                    console.log('Window.location method failed, but iframe method should have worked');
+                }
+            }, 500);
         }
         
         function redirectToAppStore() {
             console.log('Redirecting to App Store');
             // Direct redirect to App Store without any user interaction
-            window.location.href = 'https://apps.apple.com/app/id6744609929';
+            try {
+                window.location.href = 'https://apps.apple.com/app/id6744609929';
+            } catch (e) {
+                console.log('Redirect failed, user can use manual link');
+                // If automatic redirect fails, the manual link is already visible
+            }
         }
         
         // Start immediately when page loads
