@@ -141,12 +141,12 @@
 <body>
     <div class="container">
         <img src="../app-icon.png" alt="EquiSplit" class="app-icon" onerror="this.style.display='none'">
-        <h1>Opening EquiSplit...</h1>
-        <p class="invite-message">You're being redirected to join the group!</p>
+        <h1>Get EquiSplit</h1>
+        <p class="invite-message">You need EquiSplit to join this group!</p>
         
-        <div class="status-message opening-app">
-            <div class="loading"></div>
-            <p>If this page doesn't redirect automatically, you may need to download EquiSplit first.</p>
+        <div class="status-message no-app">
+            <p><strong>Download EquiSplit to join the group</strong></p>
+            <p>You'll be redirected automatically, or tap the button below:</p>
             <a href="https://apps.apple.com/app/id6744609929" class="download-btn" style="margin-top: 20px;">
                 📱 Download from App Store
             </a>
@@ -167,17 +167,20 @@
                 return;
             }
             
-            // Try the custom URL scheme immediately
-            const customSchemeURL = `travelsplit://join?code=${inviteCode}`;
-            console.log('Attempting to open app:', customSchemeURL);
+            console.log('Universal Link should handle app opening automatically');
+            console.log('If you see this page, the app is not installed - redirecting to App Store');
             
-            // Set up the fallback timer BEFORE attempting to open the app
+            // Since this is a Universal Link page, if we're seeing this page at all,
+            // it means the app is not installed. Universal Links automatically
+            // open the app if it's installed, without ever showing this page.
+            
+            // Set up a short timer to redirect to App Store
             const fallbackTimer = setTimeout(() => {
-                console.log('App opening timeout - redirecting to App Store');
+                console.log('Redirecting to App Store');
                 redirectToAppStore();
-            }, 2500); // Reduced timeout for faster redirect
+            }, 1500); // Shorter timeout since we know the app isn't installed
             
-            // Clear the timer if page becomes hidden (app opened successfully)
+            // Clear the timer if page becomes hidden (shouldn't happen, but just in case)
             const clearFallbackOnHidden = () => {
                 clearTimeout(fallbackTimer);
                 document.removeEventListener('visibilitychange', clearFallbackOnHidden);
@@ -186,40 +189,15 @@
             
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
-                    console.log('Page became hidden - app likely opened');
+                    console.log('Page became hidden unexpectedly');
                     clearFallbackOnHidden();
                 }
             });
             
             window.addEventListener('blur', () => {
-                console.log('Window lost focus - app likely opened');
+                console.log('Window lost focus unexpectedly');
                 clearFallbackOnHidden();
             });
-            
-            // Use iframe method first to avoid Safari "invalid address" error
-            // This method doesn't trigger Safari's error message
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.style.width = '1px';
-            iframe.style.height = '1px';
-            iframe.src = customSchemeURL;
-            document.body.appendChild(iframe);
-            
-            // Clean up iframe
-            setTimeout(() => {
-                if (document.body.contains(iframe)) {
-                    document.body.removeChild(iframe);
-                }
-            }, 1000);
-            
-            // Also try window.location as a backup after a short delay
-            setTimeout(() => {
-                try {
-                    window.location.href = customSchemeURL;
-                } catch (e) {
-                    console.log('Window.location method failed, but iframe method should have worked');
-                }
-            }, 500);
         }
         
         function redirectToAppStore() {
