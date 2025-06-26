@@ -141,28 +141,12 @@
 <body>
     <div class="container">
         <img src="../app-icon.png" alt="EquiSplit" class="app-icon" onerror="this.style.display='none'">
-        <h1>Join EquiSplit Group</h1>
-        <p class="invite-message">You've been invited to join a group expense tracker!</p>
+        <h1>Opening EquiSplit...</h1>
+        <p class="invite-message">You're being redirected to join the group!</p>
         
-        <div id="invite-code-display" class="invite-code" style="display: none;"></div>
-        
-        <div id="opening-app" class="status-message opening-app">
+        <div class="status-message opening-app">
             <div class="loading"></div>
-            Opening EquiSplit...
-        </div>
-        
-        <div id="no-app" class="status-message no-app" style="display: none;">
-            <p><strong>App not installed?</strong></p>
-            <p>Download EquiSplit to join the group and start tracking expenses together!</p>
-            <a href="https://apps.apple.com/app/id6744609929" class="download-btn">
-                📱 Download from App Store
-            </a>
-            
-            <div class="fallback-info">
-                <p><strong>Already have the app?</strong></p>
-                <p>Try opening it manually and entering this invite code:</p>
-                <div id="manual-code" class="invite-code"></div>
-            </div>
+            <p>If this page doesn't redirect automatically, you may need to download EquiSplit first.</p>
         </div>
     </div>
 
@@ -173,79 +157,72 @@
         
         console.log('Extracted invite code:', inviteCode);
         
-        // Display the invite code if we found one
-        if (inviteCode && inviteCode !== 'join' && inviteCode !== '') {
-            document.getElementById('invite-code-display').textContent = `Invite Code: ${inviteCode}`;
-            document.getElementById('invite-code-display').style.display = 'block';
-            document.getElementById('manual-code').textContent = inviteCode;
-        }
-        
-        // Try to open the app with both Universal Link and custom scheme
         function attemptAppOpen() {
             if (!inviteCode || inviteCode === 'join' || inviteCode === '') {
-                console.log('No valid invite code found');
-                showNoAppMessage();
+                console.log('No valid invite code found - redirecting to App Store');
+                redirectToAppStore();
                 return;
             }
             
-            // First try the custom URL scheme
+            // Try the custom URL scheme immediately
             const customSchemeURL = `travelsplit://join?code=${inviteCode}`;
-            console.log('Attempting to open:', customSchemeURL);
+            console.log('Attempting to open app:', customSchemeURL);
             
-            // Create a hidden iframe to attempt opening the app
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = customSchemeURL;
-            document.body.appendChild(iframe);
+            // Set up the fallback timer BEFORE attempting to open the app
+            const fallbackTimer = setTimeout(() => {
+                console.log('App opening timeout - redirecting to App Store');
+                redirectToAppStore();
+            }, 2500); // Reduced timeout for faster redirect
             
-            // Also try direct window.location as fallback
-            setTimeout(() => {
+            // Clear the timer if page becomes hidden (app opened successfully)
+            const clearFallbackOnHidden = () => {
+                clearTimeout(fallbackTimer);
+                document.removeEventListener('visibilitychange', clearFallbackOnHidden);
+                window.removeEventListener('blur', clearFallbackOnHidden);
+            };
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    console.log('Page became hidden - app likely opened');
+                    clearFallbackOnHidden();
+                }
+            });
+            
+            window.addEventListener('blur', () => {
+                console.log('Window lost focus - app likely opened');
+                clearFallbackOnHidden();
+            });
+            
+            // Try to open the app using multiple methods for better compatibility
+            try {
+                // Method 1: Direct window.location (works best on iOS)
                 window.location.href = customSchemeURL;
-            }, 100);
-            
-            // Remove iframe after attempt
-            setTimeout(() => {
-                document.body.removeChild(iframe);
-            }, 1000);
+            } catch (e) {
+                console.log('Direct window.location failed, trying iframe method');
+                
+                // Method 2: Hidden iframe (fallback)
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = customSchemeURL;
+                document.body.appendChild(iframe);
+                
+                // Clean up iframe
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 1000);
+            }
         }
         
-        function showNoAppMessage() {
-            document.getElementById('opening-app').style.display = 'none';
-            document.getElementById('no-app').style.display = 'block';
+        function redirectToAppStore() {
+            console.log('Redirecting to App Store');
+            // Direct redirect to App Store without any user interaction
+            window.location.href = 'https://apps.apple.com/app/id6744609929';
         }
         
-        // Start the app opening process immediately
+        // Start immediately when page loads
         attemptAppOpen();
-        
-        // If still on the page after 3 seconds, assume app is not installed
-        setTimeout(() => {
-            console.log('App opening timeout - showing download message');
-            showNoAppMessage();
-        }, 3000);
-        
-        // Also listen for page visibility changes (iOS Safari behavior)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                console.log('Page became hidden - app likely opened');
-            } else {
-                console.log('Page became visible - app might not be installed');
-                setTimeout(showNoAppMessage, 1000);
-            }
-        });
-        
-        // Handle page focus events
-        let pageHidden = false;
-        window.addEventListener('blur', function() {
-            pageHidden = true;
-            console.log('Window lost focus - app likely opened');
-        });
-        
-        window.addEventListener('focus', function() {
-            if (pageHidden) {
-                console.log('Window regained focus - checking if we should show download');
-                setTimeout(showNoAppMessage, 500);
-            }
-        });
     </script>
 </body>
 </html> 
